@@ -8,7 +8,8 @@
 <style>
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: #fff; }
-  body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #004185; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #004185; -webkit-tap-highlight-color: transparent; }
+  button { font-family: inherit; }
 
   .top-bar {
     background: #004185; height: 45px; padding: 7px 10px;
@@ -20,14 +21,17 @@
     display: inline-flex; align-items: center; justify-content: center;
     font: 14px Arial, Helvetica, sans-serif; cursor: pointer; padding: 0 8px;
   }
+  .btn:active, .btn.on { background: linear-gradient(#c9c9c9, #e9e9e9); }
   .left, .right { display: flex; gap: 10px; align-items: center; }
   .btn.menu { width: 44px; }
   .btn.filter { width: 30px; }
-  .btn.weeks { padding: 0 6px 0 7px; background: #fff; }
-  .btn.weeks::after {
+  .weeks-wrap { position: relative; }
+  .weeks-wrap .btn { background: #fff; padding: 0 6px 0 7px; pointer-events: none; }
+  .weeks-wrap .btn::after {
     content: ""; margin-left: 5px; border: 4px solid transparent;
     border-top: 5px solid #333; border-bottom: 0;
   }
+  .weeks-wrap select { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; font-size: 16px; }
   .seg { display: flex; }
   .seg .btn { width: 30px; border-radius: 0; }
   .seg .btn:first-child { border-radius: 4px 0 0 4px; }
@@ -38,16 +42,17 @@
   .module { margin: 5px; border: 1px solid #245c96; background: #fff; }
   .upper {
     background: #245c96; color: #fff; font-weight: 700; height: 45px;
-    display: flex; align-items: center; justify-content: space-between; padding: 0 9px;
+    display: flex; align-items: center; justify-content: space-between; padding: 0 9px; gap: 6px; text-align: center;
   }
-  .upper .btn { width: 30px; height: 22px; font-size: 11px; font-weight: 700; color: #000; border-radius: 2px; }
+  .upper .btn { width: 30px; height: 22px; font-size: 11px; font-weight: 700; color: #000; border-radius: 2px; flex: none; }
 
   .header { display: flex; background: #e2edf6; height: 33px; border-bottom: 1px solid #cfdbe5; }
   .header .gutter { width: 21px; flex: none; background: #fff; }
   .header .day {
-    flex: 1; display: flex; align-items: center; justify-content: center;
-    font-weight: 700; color: #374850; border-left: 1px solid #cfdbe5;
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-weight: 700; color: #374850; border-left: 1px solid #cfdbe5; min-width: 0;
   }
+  .header .day small { font-size: 10px; font-weight: 400; }
 
   .data { display: flex; position: relative; }
   .hours { width: 21px; flex: none; background: #e2edf6; }
@@ -65,97 +70,323 @@
         #dcdfe2 calc(var(--hh) - 1px), #dcdfe2 var(--hh));
   }
   .ev {
-    position: absolute; overflow: hidden; padding: 1px 3px;
+    position: absolute; overflow: hidden; padding: 1px 3px; cursor: pointer;
     background: #f1f6fa; border: 1px solid #666; border-radius: 3px;
     color: #000; font-size: 11px; line-height: 1.2; overflow-wrap: anywhere;
   }
+  .ev:hover { background: #e3edf5; }
   .ev.dashed { background: #e6f7ff; border: 1px dashed #004185; color: #004185; }
+  .ev.dashed:hover { background: #d4f0ff; }
+  .empty-week {
+    position: absolute; left: 21px; right: 0; top: 120px; text-align: center;
+    color: #374850; font-size: 13px; pointer-events: none;
+  }
+
+  /* list view */
+  .list { display: none; }
+  .list.show { display: block; }
+  .list h3 { margin: 0; padding: 7px 8px; background: #e2edf6; color: #374850; font-size: 12px; border-bottom: 1px solid #cfdbe5; }
+  .list .row { display: flex; gap: 10px; padding: 8px; border-bottom: 1px solid #e4e8eb; cursor: pointer; color: #000; }
+  .list .row:hover { background: #f1f6fa; }
+  .list .time { width: 70px; flex: none; font-weight: 700; color: #374850; }
+  .list .row b { color: #004185; }
+  .list .none { padding: 30px 8px; text-align: center; color: #374850; font-size: 13px; }
+
+  /* overlays */
+  .shade { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; z-index: 10; }
+  .shade.show { display: block; }
+  .drawer {
+    position: fixed; top: 0; bottom: 0; left: 0; width: 260px; max-width: 80vw; background: #fff; z-index: 11;
+    transform: translateX(-100%); transition: transform .2s ease; box-shadow: 2px 0 8px rgba(0,0,0,.3);
+  }
+  .drawer.show { transform: none; }
+  .drawer .head { background: #004185; color: #fff; padding: 14px 12px; font-size: 14px; font-weight: 700; }
+  .drawer .head small { display: block; font-weight: 400; font-size: 11px; margin-top: 4px; opacity: .85; }
+  .drawer a { display: block; padding: 12px; color: #004185; font-size: 13px; text-decoration: none; border-bottom: 1px solid #e4e8eb; cursor: pointer; }
+  .drawer a:hover, .drawer a.cur { background: #e2edf6; }
+
+  .dialog {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 12;
+    width: 340px; max-width: calc(100vw - 32px); max-height: calc(100vh - 60px); overflow: auto;
+    background: #fff; border: 1px solid #245c96; display: none; box-shadow: 0 4px 16px rgba(0,0,0,.35);
+  }
+  .dialog.show { display: block; }
+  .dialog .title { background: #245c96; color: #fff; font-weight: 700; font-size: 12px; padding: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .dialog .title button { background: none; border: 0; color: #fff; font-size: 18px; line-height: 1; cursor: pointer; padding: 0 2px; }
+  .dialog .body { padding: 6px 10px 10px; color: #000; font-size: 12px; }
+  .dialog table { border-collapse: collapse; width: 100%; }
+  .dialog td { padding: 5px 4px; vertical-align: top; border-bottom: 1px solid #eef1f3; }
+  .dialog td:first-child { color: #374850; font-weight: 700; width: 80px; }
+  .dialog label { display: flex; align-items: center; gap: 8px; padding: 7px 2px; border-bottom: 1px solid #eef1f3; cursor: pointer; }
+  .dialog input[type=checkbox] { width: 16px; height: 16px; }
+  .dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+  .dialog .actions .btn { font-size: 12px; height: 28px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #333; color: #fff;
+    padding: 9px 14px; border-radius: 4px; font-size: 12px; z-index: 20; opacity: 0; transition: opacity .2s; pointer-events: none;
+  }
+  .toast.show { opacity: .95; }
 
   :root { --hh: 66px; }
   @media (max-width: 500px) {
     .top-bar { padding: 7px 8px; }
     .left, .right { gap: 8px; }
   }
+  @media print {
+    .top-bar, .upper .btn { display: none; }
+  }
 </style>
 </head>
 <body>
   <div class="top-bar">
     <div class="left">
-      <span class="btn menu"><span class="ham"></span></span>
-      <span class="btn filter">
+      <span class="btn menu" id="menuBtn"><span class="ham"></span></span>
+      <span class="btn filter" id="filterBtn">
         <svg width="16" height="16" viewBox="0 0 16 16"><path d="M1 2h14l-5.5 6.5V14l-3-1.5V8.5z" fill="#999"/></svg>
       </span>
     </div>
     <div class="right">
-      <span class="btn weeks">All Weeks</span>
+      <span class="weeks-wrap">
+        <span class="btn" id="weeksLabel">All Weeks</span>
+        <select id="weekSelect" aria-label="Week"></select>
+      </span>
       <span class="seg">
-        <span class="btn"><svg width="14" height="10" viewBox="0 0 14 10" fill="#888"><rect x="0" y="0" width="3.5" height="3.5"/><rect x="5" y="0" width="3.5" height="3.5"/><rect x="10" y="0" width="3.5" height="3.5"/><rect x="0" y="5.5" width="3.5" height="3.5"/><rect x="5" y="5.5" width="3.5" height="3.5"/><rect x="10" y="5.5" width="3.5" height="3.5"/></svg></span>
-        <span class="btn"><svg width="14" height="10" viewBox="0 0 14 10" fill="#aaa"><rect y="0" width="14" height="1"/><rect y="3" width="14" height="1"/><rect y="6" width="14" height="1"/><rect y="9" width="14" height="1"/></svg></span>
+        <span class="btn on" id="gridBtn"><svg width="14" height="10" viewBox="0 0 14 10" fill="#888"><rect x="0" y="0" width="3.5" height="3.5"/><rect x="5" y="0" width="3.5" height="3.5"/><rect x="10" y="0" width="3.5" height="3.5"/><rect x="0" y="5.5" width="3.5" height="3.5"/><rect x="5" y="5.5" width="3.5" height="3.5"/><rect x="10" y="5.5" width="3.5" height="3.5"/></svg></span>
+        <span class="btn" id="listBtn"><svg width="14" height="10" viewBox="0 0 14 10" fill="#aaa"><rect y="0" width="14" height="1"/><rect y="3" width="14" height="1"/><rect y="6" width="14" height="1"/><rect y="9" width="14" height="1"/></svg></span>
       </span>
     </div>
   </div>
 
   <div class="module">
     <div class="upper">
-      <span class="btn">&lt;&lt;</span>
-      <span>All Weeks</span>
-      <span class="btn">&gt;&gt;</span>
+      <span class="btn" id="prevBtn">&lt;&lt;</span>
+      <span id="upperLabel">All Weeks</span>
+      <span class="btn" id="nextBtn">&gt;&gt;</span>
     </div>
-    <div class="header">
-      <div class="gutter"></div>
-      <div class="day">Mon</div><div class="day">Tue</div><div class="day">Wed</div><div class="day">Thu</div><div class="day">Fri</div>
+    <div id="gridView">
+      <div class="header" id="header"></div>
+      <div class="data" id="data"></div>
     </div>
-    <div class="data" id="data"></div>
+    <div class="list" id="listView"></div>
   </div>
+
+  <div class="shade" id="shade"></div>
+
+  <nav class="drawer" id="drawer">
+    <div class="head">My Timetable<small>2027 Academic Year</small></div>
+    <a class="cur" data-act="close">My Timetable</a>
+    <a data-act="list">My Courses</a>
+    <a data-act="print">Print Timetable</a>
+    <a data-act="ics">Download to Calendar</a>
+    <a data-act="toast" data-msg="Activity allocation is closed for 2027 Semester 1">Allocate Activities</a>
+    <a data-act="toast" data-msg="You have no pending swap requests">Swap Requests</a>
+    <a data-act="toast" data-msg="You have no new notifications">Notifications</a>
+    <a data-act="help">Help</a>
+  </nav>
+
+  <div class="dialog" id="dialog">
+    <div class="title"><span id="dlgTitle"></span><button id="dlgClose" aria-label="Close">&times;</button></div>
+    <div class="body" id="dlgBody"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
 
 <script>
   // day: 0=Mon..4=Fri, times in decimal hours, lane/lanes split a column for overlaps
   const events = [
-    { day: 0, start: 9, end: 11, text: ["PROD387-27S1 (C)", "Special Topic", "LecA", "01", "15/2-22/3, 19/4, 3/5-24/5", "Rehua 002 Lectorial", "Bond, J"] },
-    { day: 0, start: 11, end: 12, text: ["DISC402-27S2 (C)", "Postproduction, exhibition and distribution", "LecA", "01", "12/7-16/8, 6/9-11/10", "Rehua 103 Lectorial"] },
-    { day: 0, start: 12, end: 13, text: ["DISC401-27S1 (C)", "Conception and development in the digital screen", "LecA", "01", "15/2-22/3, 19/4-24/5", "Otakaro 131"] },
-    { day: 0, start: 13, end: 14, text: ["DISC401-27S1 (C)", "Conception and development in the digital screen", "TutA", "01", "15/2-22/3, 19/4-24/5", "Otakaro 133"] },
-    { day: 0, start: 14, end: 16, text: ["DISC403-27W (C)", "Digital Screen Project", "LecA", "01", "15/2-22/3, 19/4, 3/5-24/5, 12/7-16/8, 6/9-11/10", "Otakaro 236 L2 Lecture Theatre (15/2-22/3, 19/4, 3/5-24/5), Otakaro 146 L1 Lecture Theatre (12/7-16/8, 6/9-11/10)"] },
-    { day: 2, start: 9, end: 13, dashed: true, text: ["DISC403-27W (C)", "Digital Screen Project", "DroA", "01", "17/2-24/3, 21/4-26/5, 14/7-18/8, 8/9-13/10", "Otakaro 132 (17/2, 3/3-24/3, 21/4, 5/5-26/5), ED03116 (24/2), Otakaro 121 (28/4), Otakaro 104 (14/7-18/8, 8/9-13/10)", "Jones, O (17/2-24/3, 21/4-26/5, 14/7-18/8, 8/9-13/10),", "Budgen, T (17/2-24/3, 21/4-26/5, 14/7-18/8, 8/9-13/10)"] },
-    { day: 3, start: 11, end: 13, text: ["PROD387-27S1 (C)", "Special Topic", "ComA", "01", "18/2-25/3, 22/4-27/5", "Len Lye 201 Computer Lab 2", "Bond, J"] },
-    { day: 4, start: 12, end: 13.5, lane: 0, lanes: 2, dashed: true, text: ["DISC403-27W (C)", "Digital Screen Project", "DroB", "01", "19/2-26/3, 23/4-28/5", "Otakaro 132"] },
-    { day: 4, start: 13, end: 15, lane: 1, lanes: 2, text: ["PROD387-27S1 (C)", "Special Topic", "WorA", "01", "19/2-26/3, 23/4-28/5", "Len Lye 201 Computer Lab 2"] },
+    { day: 0, start: 9, end: 11, code: "PROD387-27S1 (C)", name: "Special Topic", act: "LecA", grp: "01", dates: "15/2-22/3, 19/4, 3/5-24/5", loc: "Rehua 002 Lectorial", staff: "Bond, J" },
+    { day: 0, start: 11, end: 12, code: "DISC402-27S2 (C)", name: "Postproduction, exhibition and distribution", act: "LecA", grp: "01", dates: "12/7-16/8, 6/9-11/10", loc: "Rehua 103 Lectorial", staff: "" },
+    { day: 0, start: 12, end: 13, code: "DISC401-27S1 (C)", name: "Conception and development in the digital screen", act: "LecA", grp: "01", dates: "15/2-22/3, 19/4-24/5", loc: "Otakaro 131", staff: "" },
+    { day: 0, start: 13, end: 14, code: "DISC401-27S1 (C)", name: "Conception and development in the digital screen", act: "TutA", grp: "01", dates: "15/2-22/3, 19/4-24/5", loc: "Otakaro 133", staff: "" },
+    { day: 0, start: 14, end: 16, code: "DISC403-27W (C)", name: "Digital Screen Project", act: "LecA", grp: "01", dates: "15/2-22/3, 19/4, 3/5-24/5, 12/7-16/8, 6/9-11/10", loc: "Otakaro 236 L2 Lecture Theatre (15/2-22/3, 19/4, 3/5-24/5), Otakaro 146 L1 Lecture Theatre (12/7-16/8, 6/9-11/10)", staff: "" },
+    { day: 2, start: 9, end: 13, dashed: true, code: "DISC403-27W (C)", name: "Digital Screen Project", act: "DroA", grp: "01", dates: "17/2-24/3, 21/4-26/5, 14/7-18/8, 8/9-13/10", loc: "Otakaro 132 (17/2, 3/3-24/3, 21/4, 5/5-26/5), ED03116 (24/2), Otakaro 121 (28/4), Otakaro 104 (14/7-18/8, 8/9-13/10)", staff: "Jones, O (17/2-24/3, 21/4-26/5, 14/7-18/8, 8/9-13/10),\nBudgen, T (17/2-24/3, 21/4-26/5, 14/7-18/8, 8/9-13/10)" },
+    { day: 3, start: 11, end: 13, code: "PROD387-27S1 (C)", name: "Special Topic", act: "ComA", grp: "01", dates: "18/2-25/3, 22/4-27/5", loc: "Len Lye 201 Computer Lab 2", staff: "Bond, J" },
+    { day: 4, start: 12, end: 13.5, lane: 0, lanes: 2, dashed: true, code: "DISC403-27W (C)", name: "Digital Screen Project", act: "DroB", grp: "01", dates: "19/2-26/3, 23/4-28/5", loc: "Otakaro 132", staff: "" },
+    { day: 4, start: 13, end: 15, lane: 1, lanes: 2, code: "PROD387-27S1 (C)", name: "Special Topic", act: "WorA", grp: "01", dates: "19/2-26/3, 23/4-28/5", loc: "Len Lye 201 Computer Lab 2", staff: "" },
   ];
 
-  const FIRST = 8, LAST = 18;
-  const hh = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--hh"));
-  const data = document.getElementById("data");
+  const YEAR = 2027, FIRST = 8, LAST = 18;
+  const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+  const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const DAY_MS = 864e5;
+  const $ = id => document.getElementById(id);
 
-  const hours = document.createElement("div");
-  hours.className = "hours";
-  for (let h = FIRST; h <= LAST; h++) {
-    const d = document.createElement("div");
-    d.className = "hour";
-    d.textContent = h;
-    hours.appendChild(d);
-  }
-  data.appendChild(hours);
+  // Teaching weeks: Mondays from 15 Feb to 11 Oct 2027
+  const weeks = [];
+  for (let d = new Date(YEAR, 1, 15); d <= new Date(YEAR, 9, 11); d = new Date(d.getTime() + 7 * DAY_MS)) weeks.push(d);
+  const weekIndexOf = date => Math.floor((date - weeks[0]) / (7 * DAY_MS));
 
-  const cols = [];
-  for (let i = 0; i < 5; i++) {
-    const c = document.createElement("div");
-    c.className = "col";
-    c.style.height = (LAST - FIRST + 1) * hh + "px";
-    data.appendChild(c);
-    cols.push(c);
-  }
-
+  // Turn "15/2-22/3, 19/4" into a set of week indexes
   for (const e of events) {
-    const el = document.createElement("div");
-    el.className = "ev" + (e.dashed ? " dashed" : "");
-    const lanes = e.lanes || 1, lane = e.lane || 0;
-    el.style.top = (e.start - FIRST) * hh + 1 + "px";
-    el.style.height = (e.end - e.start) * hh - 2 + "px";
-    el.style.left = `calc(${(lane / lanes) * 100}% + 2px)`;
-    el.style.width = `calc(${100 / lanes}% - 5px)`;
-    el.innerHTML = e.text.map(t => `<div>${t}</div>`).join("");
-    cols[e.day].appendChild(el);
+    e.weeks = new Set();
+    for (const part of e.dates.split(",")) {
+      const [a, b] = part.trim().split("-").map(s => { const [d, m] = s.split("/").map(Number); return new Date(YEAR, m - 1, d); });
+      for (let w = weekIndexOf(a); w <= weekIndexOf(b || a); w++) e.weeks.add(w);
+    }
   }
+
+  const state = { week: -1, view: "grid", hidden: new Set() };
+  const fmt = d => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  const fmtTime = h => `${String(Math.floor(h)).padStart(2, "0")}:${h % 1 ? "30" : "00"}`;
+  const visible = () => events.filter(e => !state.hidden.has(e.code.split("-")[0]) && (state.week < 0 || e.weeks.has(state.week)));
+  const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+  // Week dropdown
+  const sel = $("weekSelect");
+  sel.innerHTML = `<option value="-1">All Weeks</option>` + weeks.map((w, i) =>
+    `<option value="${i}">Week ${i + 1} (${fmt(w)} - ${fmt(new Date(w.getTime() + 4 * DAY_MS))})</option>`).join("");
+
+  const hh = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--hh"));
+
+  function render() {
+    const label = state.week < 0 ? "All Weeks" : `Week ${state.week + 1}`;
+    $("weeksLabel").textContent = label;
+    sel.value = state.week;
+    const w = weeks[state.week];
+    $("upperLabel").textContent = state.week < 0 ? "All Weeks"
+      : `${fmt(w)} ${YEAR} - ${fmt(new Date(w.getTime() + 4 * DAY_MS))} ${YEAR}`;
+    $("filterBtn").classList.toggle("on", state.hidden.size > 0);
+
+    $("header").innerHTML = `<div class="gutter"></div>` + DAYS.map((d, i) =>
+      `<div class="day">${d}${state.week < 0 ? "" : `<small>${(() => { const x = new Date(w.getTime() + i * DAY_MS); return x.getDate() + "/" + (x.getMonth() + 1); })()}</small>`}</div>`).join("");
+
+    const data = $("data");
+    data.innerHTML = "";
+    const hours = document.createElement("div");
+    hours.className = "hours";
+    for (let h = FIRST; h <= LAST; h++) hours.innerHTML += `<div class="hour">${h}</div>`;
+    data.appendChild(hours);
+    const cols = DAYS.map(() => {
+      const c = document.createElement("div");
+      c.className = "col";
+      c.style.height = (LAST - FIRST + 1) * hh + "px";
+      data.appendChild(c);
+      return c;
+    });
+
+    const vis = visible();
+    for (const e of vis) {
+      const el = document.createElement("div");
+      el.className = "ev" + (e.dashed ? " dashed" : "");
+      const lanes = e.lanes || 1, lane = e.lane || 0;
+      el.style.top = (e.start - FIRST) * hh + 1 + "px";
+      el.style.height = (e.end - e.start) * hh - 2 + "px";
+      el.style.left = `calc(${(lane / lanes) * 100}% + 2px)`;
+      el.style.width = `calc(${100 / lanes}% - 5px)`;
+      const lines = [e.code, e.name, e.act, e.grp];
+      if (state.week < 0) lines.push(e.dates);
+      lines.push(e.loc, ...e.staff.split("\n"));
+      el.innerHTML = lines.filter(Boolean).map(t => `<div>${esc(t)}</div>`).join("");
+      el.onclick = () => showEvent(e);
+      cols[e.day].appendChild(el);
+    }
+    if (!vis.length) data.insertAdjacentHTML("beforeend",
+      `<div class="empty-week">${state.week >= 0 && !events.some(e => e.weeks.has(state.week)) ? "No classes this week (break)" : "No activities to display"}</div>`);
+
+    // List view
+    const list = $("listView");
+    let html = "";
+    DAYS.forEach((d, i) => {
+      const dayEvs = vis.filter(e => e.day === i).sort((a, b) => a.start - b.start);
+      if (!dayEvs.length) return;
+      html += `<h3>${DAY_NAMES[i]}${state.week < 0 ? "" : " " + fmt(new Date(w.getTime() + i * DAY_MS))}</h3>`;
+      dayEvs.forEach(e => html += `<div class="row" data-i="${events.indexOf(e)}"><div class="time">${fmtTime(e.start)} - ${fmtTime(e.end)}</div><div><b>${esc(e.code)}</b> ${esc(e.act)}<br>${esc(e.name)}<br>${esc(e.loc.replace(/ \(.*$/, ""))}</div></div>`);
+    });
+    list.innerHTML = html || `<div class="none">No activities to display</div>`;
+    list.querySelectorAll(".row").forEach(r => r.onclick = () => showEvent(events[r.dataset.i]));
+
+    $("gridView").style.display = state.view === "grid" ? "" : "none";
+    list.classList.toggle("show", state.view === "list");
+    $("gridBtn").classList.toggle("on", state.view === "grid");
+    $("listBtn").classList.toggle("on", state.view === "list");
+  }
+
+  // Overlays
+  const shade = $("shade"), drawer = $("drawer"), dialog = $("dialog");
+  function closeAll() { shade.classList.remove("show"); drawer.classList.remove("show"); dialog.classList.remove("show"); }
+  function openDialog(title, body) {
+    $("dlgTitle").textContent = title;
+    $("dlgBody").innerHTML = body;
+    shade.classList.add("show");
+    dialog.classList.add("show");
+  }
+  shade.onclick = closeAll;
+  $("dlgClose").onclick = closeAll;
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeAll(); });
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+  }
+
+  function showEvent(e) {
+    const row = (k, v) => v ? `<tr><td>${k}</td><td>${esc(v).replace(/\n/g, "<br>")}</td></tr>` : "";
+    openDialog(e.code, `<table>
+      ${row("Course", e.name)}
+      ${row("Activity", e.act + " / " + e.grp)}
+      ${row("Day", DAY_NAMES[e.day])}
+      ${row("Time", fmtTime(e.start) + " - " + fmtTime(e.end))}
+      ${row("Weeks", e.dates)}
+      ${row("Location", e.loc)}
+      ${row("Staff", e.staff)}
+      ${row("Status", "Allocated")}
+    </table>`);
+  }
+
+  $("menuBtn").onclick = () => { shade.classList.add("show"); drawer.classList.add("show"); };
+  drawer.querySelectorAll("a").forEach(a => a.onclick = () => {
+    closeAll();
+    const act = a.dataset.act;
+    if (act === "list") { state.view = "list"; render(); }
+    else if (act === "print") setTimeout(() => window.print(), 250);
+    else if (act === "ics") downloadIcs();
+    else if (act === "toast") toast(a.dataset.msg);
+    else if (act === "help") openDialog("Help", `<p>Tap an activity to see its details. Use the week selector or the &lt;&lt; &gt;&gt; buttons to move between teaching weeks, and the filter to show or hide courses.</p><p>For timetable enquiries contact the Student Services Centre.</p>`);
+  });
+
+  $("filterBtn").onclick = () => {
+    const codes = [...new Set(events.map(e => e.code.split("-")[0]))];
+    const names = Object.fromEntries(events.map(e => [e.code.split("-")[0], e.name]));
+    openDialog("Filter Courses", codes.map(c =>
+      `<label><input type="checkbox" value="${c}" ${state.hidden.has(c) ? "" : "checked"}> <span><b>${c}</b> ${esc(names[c])}</span></label>`).join("") +
+      `<div class="actions"><span class="btn" id="fAll">Select All</span><span class="btn" id="fApply">Apply</span></div>`);
+    $("fAll").onclick = () => dialog.querySelectorAll("input").forEach(i => i.checked = true);
+    $("fApply").onclick = () => {
+      state.hidden = new Set([...dialog.querySelectorAll("input")].filter(i => !i.checked).map(i => i.value));
+      closeAll();
+      render();
+    };
+  };
+
+  sel.onchange = () => { state.week = Number(sel.value); render(); };
+  $("prevBtn").onclick = () => { state.week = state.week <= 0 ? -1 : state.week - 1; render(); };
+  $("nextBtn").onclick = () => { if (state.week < weeks.length - 1) { state.week++; render(); } };
+  $("gridBtn").onclick = () => { state.view = "grid"; render(); };
+  $("listBtn").onclick = () => { state.view = "list"; render(); };
+
+  function downloadIcs() {
+    const pad = n => String(n).padStart(2, "0");
+    const stamp = (d, h) => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(Math.floor(h))}${h % 1 ? "30" : "00"}00`;
+    let out = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Timetable//EN\r\n";
+    events.forEach((e, n) => e.weeks.forEach(w => {
+      const d = new Date(weeks[w].getTime() + e.day * DAY_MS);
+      out += `BEGIN:VEVENT\r\nUID:${n}-${w}@timetable\r\nDTSTART:${stamp(d, e.start)}\r\nDTEND:${stamp(d, e.end)}\r\nSUMMARY:${e.code} ${e.act}\r\nLOCATION:${e.loc.replace(/ \(.*$/, "")}\r\nEND:VEVENT\r\n`;
+    }));
+    out += "END:VCALENDAR\r\n";
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([out], { type: "text/calendar" }));
+    a.download = "timetable-2027.ics";
+    a.click();
+    toast("Timetable downloaded");
+  }
+
+  render();
 </script>
 </body>
 </html>
