@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Student - My Timetable - University of Canterbury - New Zealand</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #004185; }
+
+  .top-bar {
+    background: #004185; height: 45px; padding: 7px 10px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .btn {
+    height: 30px; border: 1px solid #9aa6b2; border-radius: 4px;
+    background: linear-gradient(#fdfdfd, #d9d9d9); color: #333;
+    display: inline-flex; align-items: center; justify-content: center;
+    font: 14px Arial, Helvetica, sans-serif; cursor: pointer; padding: 0 8px;
+  }
+  .left, .right { display: flex; gap: 10px; align-items: center; }
+  .btn.menu { width: 44px; }
+  .btn.filter { width: 30px; }
+  .btn.weeks { padding: 0 6px 0 7px; background: #fff; }
+  .btn.weeks::after {
+    content: ""; margin-left: 5px; border: 4px solid transparent;
+    border-top: 5px solid #333; border-bottom: 0;
+  }
+  .seg { display: flex; }
+  .seg .btn { width: 30px; border-radius: 0; }
+  .seg .btn:first-child { border-radius: 4px 0 0 4px; }
+  .seg .btn:last-child { border-radius: 0 4px 4px 0; border-left: 0; }
+  .ham { width: 20px; height: 12px; border-top: 1px solid #aaa; border-bottom: 1px solid #aaa; position: relative; }
+  .ham::after { content: ""; position: absolute; left: 0; right: 0; top: 5px; border-top: 1px solid #aaa; }
+
+  .module { margin: 5px; border: 1px solid #245c96; background: #fff; }
+  .upper {
+    background: #245c96; color: #fff; font-weight: 700; height: 45px;
+    display: flex; align-items: center; justify-content: space-between; padding: 0 9px;
+  }
+  .upper .btn { width: 30px; height: 22px; font-size: 11px; font-weight: 700; color: #000; border-radius: 2px; }
+
+  .header { display: flex; background: #e2edf6; height: 33px; border-bottom: 1px solid #cfdbe5; }
+  .header .gutter { width: 21px; flex: none; background: #fff; }
+  .header .day {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: #374850; border-left: 1px solid #cfdbe5;
+  }
+
+  .data { display: flex; position: relative; }
+  .hours { width: 21px; flex: none; background: #e2edf6; }
+  .hour {
+    height: var(--hh); font-weight: 700; color: #374850; padding: 6px 0 0 4px;
+    border-bottom: 1px solid #c9d4dc; font-size: 11px;
+  }
+  .col {
+    flex: 1; position: relative; min-width: 0; border-left: 1px solid #cfdbe5;
+    background:
+      repeating-linear-gradient(to bottom,
+        transparent 0, transparent calc(var(--hh) / 2 - 1px),
+        #f0f2f4 calc(var(--hh) / 2 - 1px), #f0f2f4 calc(var(--hh) / 2),
+        transparent calc(var(--hh) / 2), transparent calc(var(--hh) - 1px),
+        #dcdfe2 calc(var(--hh) - 1px), #dcdfe2 var(--hh));
+  }
+  .ev {
+    position: absolute; overflow: hidden; padding: 1px 3px;
+    background: #f1f6fa; border: 1px solid #666; border-radius: 3px;
+    color: #000; font-size: 11px; line-height: 1.2; overflow-wrap: anywhere;
+  }
+  .ev.dashed { background: #e6f7ff; border: 1px dashed #004185; color: #004185; }
+
+  :root { --hh: 66px; }
+  @media (max-width: 500px) {
+    .top-bar { padding: 7px 8px; }
+    .left, .right { gap: 8px; }
+  }
+</style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="left">
+      <span class="btn menu"><span class="ham"></span></span>
+      <span class="btn filter">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M1 2h14l-5.5 6.5V14l-3-1.5V8.5z" fill="#999"/></svg>
+      </span>
+    </div>
+    <div class="right">
+      <span class="btn weeks">All Weeks</span>
+      <span class="seg">
+        <span class="btn"><svg width="14" height="10" viewBox="0 0 14 10" fill="#888"><rect x="0" y="0" width="3.5" height="3.5"/><rect x="5" y="0" width="3.5" height="3.5"/><rect x="10" y="0" width="3.5" height="3.5"/><rect x="0" y="5.5" width="3.5" height="3.5"/><rect x="5" y="5.5" width="3.5" height="3.5"/><rect x="10" y="5.5" width="3.5" height="3.5"/></svg></span>
+        <span class="btn"><svg width="14" height="10" viewBox="0 0 14 10" fill="#aaa"><rect y="0" width="14" height="1"/><rect y="3" width="14" height="1"/><rect y="6" width="14" height="1"/><rect y="9" width="14" height="1"/></svg></span>
+      </span>
+    </div>
+  </div>
+
+  <div class="module">
+    <div class="upper">
+      <span class="btn">&lt;&lt;</span>
+      <span>All Weeks</span>
+      <span class="btn">&gt;&gt;</span>
+    </div>
+    <div class="header">
+      <div class="gutter"></div>
+      <div class="day">Mon</div><div class="day">Tue</div><div class="day">Wed</div><div class="day">Thu</div><div class="day">Fri</div>
+    </div>
+    <div class="data" id="data"></div>
+  </div>
+
+<script>
+  // day: 0=Mon..4=Fri, times in decimal hours, lane/lanes split a column for overlaps
+  const events = [
+    { day: 0, start: 9, end: 11, text: ["PROD387-27S1 (C)", "Special Topic", "LecA", "01", "15/2-22/3, 19/4, 3/5-24/5", "Rehua 002 Lectorial", "Bond, J"] },
+    { day: 0, start: 11, end: 12, text: ["DISC402-27S2 (C)", "Postproduction, exhibition and distribution", "LecA", "01", "12/7-16/8, 6/9-11/10", "Rehua 103 Lectorial"] },
+    { day: 0, start: 12, end: 13, text: ["DISC401-27S1 (C)", "Conception and development in the digital screen", "LecA", "01", "15/2-22/3, 19/4-24/5", "Otakaro 131"] },
+    { day: 0, start: 13, end: 14, text: ["DISC401-27S1 (C)", "Conception and development in the digital screen", "TutA", "01", "15/2-22/3, 19/4-24/5", "Otakaro 133"] },
+    { day: 0, start: 14, end: 16, text: ["DISC403-27W (C)", "Digital Screen Project", "LecA", "01", "15/2-22/3, 19/4, 3/5-24/5, 12/7-16/8, 6/9-11/10", "Otakaro 236 L2 Lecture Theatre (15/2-22/3, 19/4, 3/5-24/5), Otakaro 146 L1 Lecture Theatre (12/7-16/8, 6/9-11/10)"] },
+    { day: 2, start: 9, end: 13, dashed: true, text: ["DISC403-27W (C)", "Digital Screen Project", "DroA", "01", "17/2-24/3, 21/4-26/5, 14/7-18/8, 8/9-13/10", "Otakaro 132 (17/2, 3/3-24/3, 21/4, 5/5-26/5), ED03116 (24/2), Otakaro 121 (28/4), Otakaro 104 (14/7-18/8, 8/9-13/10)", "Jones, O (17/2-24/3, 21/4-26/5, 14/7-18/8, 8/9-13/10),", "Budgen, T (17/2-24/3, 21/4-26/5, 14/7-18/8, 8/9-13/10)"] },
+    { day: 3, start: 11, end: 13, text: ["PROD387-27S1 (C)", "Special Topic", "ComA", "01", "18/2-25/3, 22/4-27/5", "Len Lye 201 Computer Lab 2", "Bond, J"] },
+    { day: 4, start: 12, end: 13.5, lane: 0, lanes: 2, dashed: true, text: ["DISC403-27W (C)", "Digital Screen Project", "DroB", "01", "19/2-26/3, 23/4-28/5", "Otakaro 132"] },
+    { day: 4, start: 13, end: 15, lane: 1, lanes: 2, text: ["PROD387-27S1 (C)", "Special Topic", "WorA", "01", "19/2-26/3, 23/4-28/5", "Len Lye 201 Computer Lab 2"] },
+  ];
+
+  const FIRST = 8, LAST = 18;
+  const hh = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--hh"));
+  const data = document.getElementById("data");
+
+  const hours = document.createElement("div");
+  hours.className = "hours";
+  for (let h = FIRST; h <= LAST; h++) {
+    const d = document.createElement("div");
+    d.className = "hour";
+    d.textContent = h;
+    hours.appendChild(d);
+  }
+  data.appendChild(hours);
+
+  const cols = [];
+  for (let i = 0; i < 5; i++) {
+    const c = document.createElement("div");
+    c.className = "col";
+    c.style.height = (LAST - FIRST + 1) * hh + "px";
+    data.appendChild(c);
+    cols.push(c);
+  }
+
+  for (const e of events) {
+    const el = document.createElement("div");
+    el.className = "ev" + (e.dashed ? " dashed" : "");
+    const lanes = e.lanes || 1, lane = e.lane || 0;
+    el.style.top = (e.start - FIRST) * hh + 1 + "px";
+    el.style.height = (e.end - e.start) * hh - 2 + "px";
+    el.style.left = `calc(${(lane / lanes) * 100}% + 2px)`;
+    el.style.width = `calc(${100 / lanes}% - 5px)`;
+    el.innerHTML = e.text.map(t => `<div>${t}</div>`).join("");
+    cols[e.day].appendChild(el);
+  }
+</script>
+</body>
+</html>
